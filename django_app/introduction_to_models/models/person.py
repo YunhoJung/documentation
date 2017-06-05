@@ -35,24 +35,3 @@ class Person(models.Model):
     # admin.py에 Person클래스 등록
     # createsuperuser로 슈퍼유저 계정 생성
     # runserver 후 admin접속해서 Person객체 생성 및 저장해보기
-
-class ManuFacturer(models.Model):
-    name = models.CharField(max_length=30)
-
-    def __str__(self):
-        return self.name
-
-
-class Car(models.Model):
-    name = models.CharField(max_length=40)
-    manufacturer = models.ForeignKey(
-        ManuFacturer,
-        # myapp.Manufacturer
-        # introduction_to_models.Manufacturer
-        on_delete=models.CASCADE,
-    )
-
-    def __str__(self):
-        return self.name
-
-
