@@ -1,4 +1,6 @@
+from datetime import date, datetime
 from django.db import models
+from django.db.models import Q
 
 
 class Player(models.Model):
@@ -7,8 +9,16 @@ class Player(models.Model):
     def __str__(self):
         return self.name
 
-    # current_club프로퍼티에 현재 속하는 Club 리턴
-    #
+    @property
+    def current_club(self):
+        return self.current_tradeinfo.club
+
+    @property
+    def current_tradeinfo(self):
+        return self.tradeinfo_set.get(date_leaved__isnull=True)
+
+        # current_club프로퍼티에 현재 속하는 Club 리턴
+        # current_tradeinfo 프로퍼티에 현재 자신의 Tradeinfo 리턴
 
 
 class Club(models.Model):
@@ -16,12 +26,38 @@ class Club(models.Model):
     players = models.ManyToManyField(
         Player,
         through='TradeInfo',
+        through_fields=('club', 'player'),
     )
 
     def __str__(self):
         return self.name
 
-    # squad 메서드에 현직 선수들만 리턴
+    def squad(self, year=None):
+        # 2015년에 현직이었던 -> 2015년에 하루라도 현직이었던 선수
+        # ex) 2015년 현직으로 존재했던 선수일 경우
+        # 떠난 날짜가 2015.1. 1보다는 커야한다.
+        # 들어온 날짜는 2016. 1. 1보다는 작아야 한다 / 2015.12. 31 보다는 작거나 같아야 한다.
+        # if year:
+        #     return self.players.filter(
+        #         tradeinfo__date_joined__lt=datetime(year + 1, 1, 1), # lower than
+        #         tradeinfo__date_leaved__gt=datetime(year, 1, 1),  # greater than
+        #     )
+        if year:
+            return self.players.filter(
+                Q(tradeinfo__date_joined__lt=datetime(year + 1, 1, 1)) &
+                (
+                    Q(tradeinfo__date_leaved__gt=datetime(year, 1, 1)) |
+                    Q(tradeinfo__date_leaved__isnull=True)
+                )
+            )
+        else:
+            # 현직 선수들만 리턴
+            return self.players.filter(tradeinfo__date_leaved__isnull=True)
+
+
+
+            # 인수로 년도(2017, 2015...등)를 받아
+            # 주어지지 않으면 현재를 기준으로 함
 
 
 class TradeInfo(models.Model):
@@ -30,8 +66,35 @@ class TradeInfo(models.Model):
     date_joined = models.DateField()
     date_leaved = models.DateField(null=True, blank=True)
 
-    # prev.club = 이전 club
-    # property로 is_current 속성이 TradeInfo가 현재 현직(leaved하지 않았는지
+    recommender = models.ForeignKey(
+        Player,
+        on_delete=models.PROTECT,
+        related_name='tradeinfo_set_by_recommender',
+        null=True,
+        blank=True
+    )
+    prev_club = models.ForeignKey(
+        Club,
+        on_delete=models.PROTECT,
+        related_name='+',
+        null=True,
+        blank=True
+    )
 
+    def __str__(self):
+        # 선수이름, 구단명 (시작일자 ~ 종료일자)
+        # date_leaved가 None일 경우 '현직을 출력하도록 함
+        return '{}, {} ({} ~ {})'.format(
+            self.player.name,
+            self.club.name,
+            self.date_joined,
+            self.date_leaved if self.date_leaved else '현직',
+        )
 
-# 위
+    @property
+    def is_current(self):
+        return not self.date_leaved  # or return self.date_leaved is None
+
+        # prev.club = 이전 club
+        # property로 is_current 속성이 TradeInfo가 현재 현직(leaved하지 않았는지) 여부 반환
+        # recommender와 prev_club을 활성화시키고 Club의 MTM필드에 through_fields를 명시
