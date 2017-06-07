@@ -17,6 +17,7 @@ class Car(models.Model):
         # introduction_to_models.Manufacturer
         on_delete=models.CASCADE,
     )
+    # related_name과 related_query_name의 차이
 
     def __str__(self):
         return self.name
