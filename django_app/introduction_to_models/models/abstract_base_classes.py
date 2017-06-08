@@ -33,7 +33,7 @@ class Student(CommonInfo):
         )
 
     class Meta:
-        db_table = 'introduction_to_models_abc_student'
+        db_table = 'introduction_to_models_abc_student' # Student 클래스와 Teacher 클래스가 모두 CommonInfo를 상속받기때문에 db_table 테이블 이름이 겹치게 된다. 이를 막기 위해 이름을 따로 지정해준다.
 
 
 class Teacher(CommonInfo):
